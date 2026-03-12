@@ -70,6 +70,12 @@ try {
   // Column might already exist
 }
 
+try {
+  db.exec('ALTER TABLE contacts ADD COLUMN phone TEXT');
+} catch (e) {
+  // Column might already exist
+}
+
 // Insert sample data if empty
 const stmt = db.prepare('SELECT COUNT(*) as count FROM projects');
 const { count } = stmt.get() as { count: number };
@@ -320,11 +326,19 @@ app.get('/api/contacts', (req, res) => {
 
 app.delete('/api/contacts/:id', authenticateToken, (req, res) => {
   const { id } = req.params;
+  console.log(`Attempting to delete inquiry with ID: ${id}`);
   try {
     const del = db.prepare('DELETE FROM contacts WHERE id = ?');
-    del.run(id);
-    res.status(204).send();
+    const result = del.run(id);
+    console.log(`Delete result:`, result);
+    if (result.changes > 0) {
+      res.status(204).send();
+    } else {
+      console.warn(`No inquiry found with ID: ${id}`);
+      res.status(404).json({ error: 'Inquiry not found' });
+    }
   } catch (error) {
+    console.error('Failed to delete inquiry:', error);
     res.status(500).json({ error: 'Failed to delete inquiry' });
   }
 });
